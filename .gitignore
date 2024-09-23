@@ -1,0 +1,21 @@
+# python cache
+__pycache__/
+
+# packaging
+.env
+env/*
+data/
+
+# logs
+*.log
+*.error
+*.error.1
+
+# data
+data.json
+
+# vim
+*~
+*.swp
+*.un~
+*.swo
