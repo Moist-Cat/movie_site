@@ -7,6 +7,7 @@ import logging
 
 from flask import Blueprint, Flask, request, make_response
 from flask_classful import FlaskView, route
+from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import sqlalchemy
 
@@ -18,6 +19,7 @@ from movieapp.log import logged
 log = logging.getLogger("global")
 
 app = Flask(__name__)
+CORS(app)
 api = Blueprint("api", __name__, url_prefix="/api")
 
 class ModelSerializer(JSONEncoder):
