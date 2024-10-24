@@ -13,6 +13,8 @@ data/
 
 # data
 data.json
+etc/init_db/failed/*.html
+etc/init_db/metadata/*.json
 
 # vim
 *~

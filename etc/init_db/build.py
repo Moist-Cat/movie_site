@@ -483,7 +483,7 @@ def hbo_max():
 
     for id in get_files():
         data = load_file(id)
-        if "max" in  data["tags"]:
+        if "max" in data["tags"]:
             continue
         for movie in links:
             link = BASE_URL + movie["href"]

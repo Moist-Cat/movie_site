@@ -166,10 +166,36 @@ def handle_not_found(e):
     return output_json(e.get_body(), e.code, e.get_headers())
 
 class MovieAPIView(APIView):
-    pass
+    
+    @protected
+    def index(self):
+        args = request.args
+        limit = min(int(args.get("limit", 50)), 1000)
+        offset = int(args.get("offset", 0))
+
+        if "tags" not in args:
+            return self.get_queryset("get").offset(offset).limit(limit).all()
+
+        tags = args.get("tags", "")
+        tags = map(int, tags.split(","))
+
+        return client.search(tags=tags).offset(offset).limit(limit).all()
+
     
 class TagAPIView(APIView):
-    pass
+
+    @protected
+    def index(self):
+        args = request.args
+        limit = min(int(args.get("limit", 50)), 1000)
+        offset = int(args.get("offset", 0))
+
+         
+        kwargs = {}
+        if "category" in args:
+            kwargs = {"category": args["category"]}
+        return self.get_queryset("get", **kwargs).offset(offset).limit(limit).all()
+
 
 class LinkAPIView(APIView):
     pass

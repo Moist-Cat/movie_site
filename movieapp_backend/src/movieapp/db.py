@@ -64,7 +64,7 @@ class Base:
 
 
 class Movie(Base):
-    title = Column(String(100), nullable=False)
+    title = Column(String(200), nullable=False)
     runtime = Column(Integer, nullable=False)
     release_year = Column(Integer, nullable=False) 
     rating = Column(Integer, CheckConstraint('rating >= 0 AND rating <= 1000'), default=0)

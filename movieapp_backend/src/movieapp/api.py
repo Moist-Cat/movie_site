@@ -96,6 +96,9 @@ class Client:
     def get_movie(self, /, **kwargs):
         return self._get(Movie, **kwargs)
 
+    def get_or_create_movie(self, /, **kwargs):
+        return self._get_or_create(Movie, **kwargs)
+
     def get_movie_tags(self, id):
         return self.get_tag(
         ).join(
@@ -118,13 +121,16 @@ class Client:
     def get_tag(self, /, **kwargs):
         return self._get(Tag, **kwargs)
 
+    def get_or_create_tag(self, /, **kwargs):
+        return self._get_or_create(Tag, **kwargs)
+
     def create_link(self, /, **kwargs):
         return self._create(Link, **kwargs)
 
     def get_link(self, /, **kwargs):
         return self._get(Link, **kwargs)
 
-    def search(self, tags, min_rating: float):
+    def search(self, tags, min_rating: float=0.0):
         """
         SELECT * FROM movie m JOIN tag t ON m.id = t.movie_ie AND t.name IN {tags} WHERE m.rating > min_rating GROUP BY m.id;
         """
