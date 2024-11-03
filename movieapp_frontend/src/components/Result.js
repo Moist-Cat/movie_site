@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const Result = ({ keywords, onRestart, tags, genres }) => {
   const [movies, setMovies] = useState([]);
@@ -9,7 +10,8 @@ const Result = ({ keywords, onRestart, tags, genres }) => {
     const fetchMovies = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/movie?keywords=${keywords.join(',')}`);
+        const params = keywords[0] + "," + keywords[1] + "&" + keywords[2];
+        const response = await fetch(`api/movie?tags=${params}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -35,18 +37,13 @@ const Result = ({ keywords, onRestart, tags, genres }) => {
 
   return (
     <div>
-      <h2>Your selected keywords:</h2>
-      <ul>
-        {keywords.map((keyword, index) => (
-          <li key={index}>{keyword}</li>
-        ))}
-      </ul>
-
       <h2>Recommended Movies:</h2>
       <ul>
         {movies.length > 0 ? (
           movies.map((movie) => (
-            <li key={movie.id}>{movie.title} ({movie.year})</li>
+            <li key={movie.id} id={movie.id}>
+              <Link to={`/movie/${movie.id}`}>{movie.title} ({movie.release_year})</Link>
+            </li>
           ))
         ) : (
           <li>No movies found.</li>

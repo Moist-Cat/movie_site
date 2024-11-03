@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import Header from './components/Header';
 import StartButton from './components/StartButton';
 import Question from './components/Question';
 import Result from './components/Result';
+import MoviePage from './components/MoviePage'; // Adjust the path as needed
 import './styles.css';
 
 const questions = [
   { id: 1, text: 'What mood or genre are you in the mood for?', keywords: null },
-  {
-      id: 2, text: 'Do you prefer recent releases or are you open to older classics?',
-      keywords: [{"name":"Recent", "index": 0}, {"name": "90s", "index": 1}, {"name": "Don't care", "index": 2}] 
-  },
   { id: 2, text: 'Are you interested in specific actors, directors, or themes?', keywords: null },
+  {
+      id: 3, text: 'Do you prefer recent releases or are you open to older classics?',
+      keywords: [{"name":"Recent", "param": "release_year=2010"}, {"name": "90s", "param": "release_year=1990"}, {"name": "Don't care", "param": ""}] 
+  },
 ];
 
 const App = () => {
@@ -27,8 +29,8 @@ const App = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const response1 = fetch('tag/');
-                const response2 = fetch('/tag/?category=genre&limit=10');
+                const response1 = fetch('api/tag/');
+                const response2 = fetch('api/tag/?category=genre&limit=10');
 
                 const [res1, res2] = await Promise.all([response1, response2]);
 
@@ -59,15 +61,15 @@ const App = () => {
 
     for (let i = 0; i < tags.length; i++) {
         tag_names.push(tags[i]);
-        tags[i].index = i;
+        tags[i].param = tags[i]["id"];
     }
     for (let i = 0; i < genres.length; i++) {
         genre_names.push(genres[i]);
-        genres[i].index = i;
+        genres[i].param = genres[i]["id"];
     }
 
     questions[0].keywords = genre_names;
-    questions[2].keywords = tag_names;
+    questions[1].keywords = tag_names;
 
     const handleStart = () => setStep(1);
   
@@ -98,9 +100,23 @@ const App = () => {
         }
     };
 
+    const router = createBrowserRouter([
+        {
+            path: "/",
+            element: <Root />
+            children: [
+                {
+                    path: "/movie/:id",
+                    element: <MoviePage />,
+                }
+            ]
+        }
+    ]);
+
     return (
         <div className="App">
             <Header /> {/* Add the header */}
+            <RouterProvider router={router} />
           {renderContent()}
         </div>
     );
