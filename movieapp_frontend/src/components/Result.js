@@ -6,12 +6,17 @@ const Result = ({ keywords, onRestart, tags, genres }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  let url = process.env.REACT_APP_API_URL;
+  if (url === undefined) {
+      url = "http://localhost:5051";
+  }
+
   useEffect(() => {
     const fetchMovies = async () => {
       setLoading(true);
       try {
-        const params = keywords[0] + "," + keywords[1] + "&" + keywords[2];
-        const response = await fetch(`api/movie?tags=${params}`);
+        const params = keywords[0] + "," + keywords[1];
+        const response = await fetch(url + `/api/movie/?tags=${params}`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
