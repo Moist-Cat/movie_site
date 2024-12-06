@@ -79,11 +79,6 @@ const MoviePage = ({ match }) => {
       }
   }
 
-
-
-  console.log(cover);
-
-
   return ( 
     <div className="movie-details">
       {movie ? (

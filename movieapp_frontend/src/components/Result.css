@@ -1,0 +1,32 @@
+.movie-collage {
+  display: flex;
+  flex-wrap: wrap;  /* Allow items to wrap to the next row */
+  gap: 10px;  /* Space between images */
+  justify-content: flex-start;  /* Align items to the left */
+}
+
+.movie-item {
+  width: 150px; /* Adjust width as needed */
+  text-align: center;  /* Center the movie title */
+}
+
+.movie-item img {
+  width: 100%;  /* Ensure images fit the container */
+  height: auto;  /* Maintain aspect ratio */
+  border-radius: 8px; /* Optional: add rounded corners */
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+

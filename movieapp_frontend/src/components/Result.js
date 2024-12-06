@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import './Result.css';
 
-const Result = ({ keywords, onRestart, tags, genres }) => {
+const Result = ({ keywords, onRestart, genres }) => {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [visibleMovies, setVisibleMovies] = useState(3);
 
   let url = process.env.REACT_APP_API_URL;
   if (url === undefined) {
@@ -40,20 +42,35 @@ const Result = ({ keywords, onRestart, tags, genres }) => {
     return <div className="error">Error: {error}</div>;
   }
 
+  // Load more movies on button click
+  const loadMoreMovies = () => {
+    setVisibleMovies(visibleMovies + 3);
+  };
+
+  const back = btoa(keywords[0] + "," + keywords[1]);
+
   return (
     <div>
       <h2>Recommended Movies:</h2>
-      <ul>
+      <div className="movie-collage">
         {movies.length > 0 ? (
-          movies.map((movie) => (
-            <li key={movie.id} id={movie.id}>
-              <Link to={`/movie/${movie.id}`}>{movie.title} ({movie.release_year})</Link>
-            </li>
+          movies.slice(0, visibleMovies).map((movie) => (
+            <div key={movie.id} className="movie-item">
+              <Link to={`/movie/${movie.id}`}>
+                <img src={movie.links[0].url} alt={movie.title} />
+              </Link>
+              <p>{movie.title}</p>
+            </div>
           ))
         ) : (
-          <li>No movies found.</li>
+          <p>No movies found.</p>
         )}
-      </ul>
+      </div>
+
+      {visibleMovies < movies.length && (
+        <button onClick={loadMoreMovies}>Load More</button>
+      )}
+      
       <button onClick={onRestart}>Start Over</button>
     </div>
   );
