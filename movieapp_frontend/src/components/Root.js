@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 
 import StartButton from './StartButton';
 import Question from './Question';
 import Result from './Result';
+
 
 const questions = [
   { id: 1, text: 'Select an streaming service', keywords: null },
@@ -17,6 +19,8 @@ const Root = () => {
     const [genres, setGenres] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const navigate = useNavigate();
 
     let url = process.env.REACT_APP_API_URL;
     if (url === undefined) {
@@ -74,12 +78,17 @@ const Root = () => {
     const handleNext = (keywords) => {
         setSelectedKeywords([...selectedKeywords, ...keywords]);
         setStep(step + 1);
+        if (step >= questions.length) {
+            navigate("search?q=" + selectedKeywords.concat(keywords).join(","));
+        }
     };
 
     const handleRestart = () => {
         setStep(0);
         setSelectedKeywords([]);
     };
+
+    const last = () => navigate("/search");
 
     const renderContent = () => {
         if (step === 0) {
@@ -92,9 +101,6 @@ const Root = () => {
                   onNext={handleNext}
                 />
             );
-        }
-        else {
-            return <Result keywords={selectedKeywords} onRestart={handleRestart} tags={tags} genres={genres}/>;
         }
     };
     return renderContent();

@@ -25,7 +25,7 @@ h1 {
 }
 
 .App {
-  max-width: 600px;
+  max-width: 1200px;
   margin: 70px auto; /* Adjust for header height */
   padding: 20px;
   background: #1c1c1c;

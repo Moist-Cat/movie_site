@@ -15,8 +15,7 @@ const StartButton = ({ onStart }) => {
     const fetchMovies = async () => {
       setLoading(true);
       try {
-        // XXX fixed ID
-        const response_id = await fetch(url + `/api/tag/name/netflix`);
+        const response_id = await fetch(url + `/api/tag/name/netflix/`);
         const tag_data = await response_id.json();
         const response = await fetch(url + `/api/movie/?tags=` +  tag_data.id  + `&limit=10`);
         if (!response.ok) {
