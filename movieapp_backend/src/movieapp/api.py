@@ -9,8 +9,8 @@ import pickle
 import time
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import and_
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import and_, func
 
 from movieapp.conf import settings
 from movieapp.db import (
@@ -37,8 +37,9 @@ class Client:
 
         self.engine = create_engine(url)
 
-        Session = sessionmaker(bind=self.engine, **config)  # pylint: --disable=C0103
-        self.session = Session()
+        self.session = scoped_session(
+            sessionmaker(bind=self.engine, **config)
+        )  # pylint: --disable=C0103
 
     def __delete__(self, obj):
         self.session.rollback()
@@ -100,13 +101,12 @@ class Client:
         return self._get_or_create(Movie, **kwargs)
 
     def get_movie_tags(self, id):
-        return self.get_tag(
-        ).join(
+        return self.get_tag().join(
             TaggedMovie,
             and_(
                 Tag.id == TaggedMovie.tag_id,
                 TaggedMovie.movie_id == id,
-            )
+            ),
         )
 
     def create_tagged_movie(self, /, **kwargs):
@@ -130,16 +130,17 @@ class Client:
     def get_link(self, /, **kwargs):
         return self._get(Link, **kwargs)
 
-    def search(self, tags, min_rating: float=0.0):
+    def search(self, tags, min_rating: float = 0.0, release_year: int = 0):
         """
         SELECT * FROM movie m JOIN tag t ON m.id = t.movie_ie AND t.name IN {tags} WHERE m.rating > min_rating GROUP BY m.id;
         """
-        return self.get_movie(
-        ).filter(
-            Movie.rating > min_rating
-        ).join(
-            TaggedMovie,
-            and_(
-                Movie.id == TaggedMovie.movie_id, TaggedMovie.tag_id.in_(tags)
+        return (
+            self.get_movie()
+            .filter(and_(Movie.rating > min_rating, Movie.release_year > release_year))
+            .join(
+                TaggedMovie,
+                and_(Movie.id == TaggedMovie.movie_id, TaggedMovie.tag_id.in_(tags)),
             )
-        ).group_by(Movie.id)
+            .group_by(Movie.id)
+            .having(func.count(Movie.id) == len(tags))
+        )

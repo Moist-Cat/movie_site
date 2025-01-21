@@ -15,12 +15,15 @@ actors = set()
 for file in data:
     entry = load_file(file)
     title = entry["title"]
+    description = entry.get("description", "")
     release_year = int(entry["release_year"])
     movie = client.get_or_create_movie(
         title=title,
+        description=description,
         release_year=release_year,
         runtime=int(entry["runtime"]),
-        rating=entry["rating"]
+        rating=entry["rating"]*100,
+        votes=entry["votes"],
     )
     client.session.commit()
     for star in set(entry["actors"]):
@@ -46,12 +49,16 @@ for file in data:
     cover = entry.get("cover", None)
     if cover:
         client.create_link(movie=movie, url=cover, label="Cover")
+    for link in entry["links"]:
+        client.create_link(movie=movie, url=link, label="Provider")
+
+    client.create_link(movie=movie, url=f"https://imdb.com/title/{file}/", label="Metadata")
 
     for tag_name in set(entry["tags"]):
         category = "genre"
         if tag_name in {"max", "amazon", "netflix"}:
-            category = "streaming"
-        tag = client.get_or_create_tag(name=tag_name.lower(), category="genre")
+            category = "provider"
+        tag = client.get_or_create_tag(name=tag_name.lower(), category=category)
         client.session.commit()
         client.create_tagged_movie(movie_id=movie.id, tag_id=tag.id)
         client.session.commit()
