@@ -7,7 +7,7 @@ import Result from './Result';
 
 
 const questions = [
-  { id: 1, text: 'Select an streaming service', keywords: null },
+  { id: 1, text: 'Select a streaming service', keywords: null },
   { id: 2, text: 'What mood or genre are you in the mood for?', keywords: null },
 ];
 
@@ -32,7 +32,7 @@ const Root = () => {
             try {
                 setLoading(true);
                 const response1 = fetch(url + '/api/tag/?category=provider&limit=10');
-                const response2 = fetch(url + '/api/tag/?category=genre&limit=10');
+                const response2 = fetch(url + '/api/tag/?category=genre&limit=12');
 
                 const [res1, res2] = await Promise.all([response1, response2]);
 

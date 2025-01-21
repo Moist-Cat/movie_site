@@ -11,7 +11,7 @@ const Result = () => {
   const [error, setError] = useState(null);
   const [loadingTrailer, setLoadingTrailer] = useState(false);
   const [trailerError, setTrailerError] = useState(null);
-  const [visibleMovies, setVisibleMovies] = useState(3);
+  const [visibleMovies, setVisibleMovies] = useState(5);
 
   const [searchParams] = useSearchParams();
   let params = searchParams.get("q");
@@ -85,7 +85,7 @@ const Result = () => {
 
   // Load more movies on button click
   const loadMoreMovies = () => {
-    setVisibleMovies(visibleMovies + 3);
+    setVisibleMovies(visibleMovies + 5);
   };
   
   const setLoadingText = (loadingTrailer, movie_id, trailer, trailer_id) => {

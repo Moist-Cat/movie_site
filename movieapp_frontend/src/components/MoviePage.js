@@ -100,13 +100,13 @@ const MoviePage = ({ match }) => {
       {movie ? (
         <>
           {cover}
-          <div className="movie-media">
+          <div className="movie-media-trailer">
             {trailer ? (
-              <video controls autoplay="" name="media" className="movie-media-item">
+              <video controls autoplay="" name="media">
                 <source src={trailer.url} type="video/mp4" className="movie-media-item" />
               </video>
             ) : (
-              <div className="movie-media-item">
+              <div>
                 <button onClick={loadTrailer} disabled={loadingTrailer}>
                   {loadingTrailer ? 'Loading Trailer...' : 'Load Trailer'}
                 </button>
@@ -119,7 +119,7 @@ const MoviePage = ({ match }) => {
         <div>No movie found.</div>
       )}
     </div>
-    <p><strong>Rating:</strong> {movie.rating}</p>
+    <p><strong>Rating:</strong> {movie.rating / 100}</p>
     {keywords}
     <h2>Description</h2>
     <p>{movie.description}</p>

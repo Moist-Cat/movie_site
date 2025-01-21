@@ -1,8 +1,8 @@
-.moie-details {
+.movie-details {
+  gap: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-start;
+
 }
 
 .movie-media {
@@ -15,6 +15,12 @@
   width: 100%;
   height: auto;
   border-radius: 8px;
+  flex: wrap;
+}
+
+.movie-media-trailer {
+  width: 300px;
+  height: auto;
 }
 
 button {

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import './StartButton.css'
 
 const StartButton = ({ onStart }) => {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showProviders, setShowProviders] = useState(false);
 
   let url = process.env.REACT_APP_API_URL;
   if (url === undefined) {
@@ -36,26 +38,53 @@ const StartButton = ({ onStart }) => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
+  const toggleProviders = (movieId) => {
+    setShowProviders(prevState => ({
+      ...prevState,
+      [movieId]: !prevState[movieId] // Toggle visibility for the specific movie
+    }));
+  };
+
 
   return (
       <div>
           <div>
             <h1>Welcome to Movie Recommender!</h1>
-            <button onClick={onStart}>Start</button>
+            <button onClick={onStart}>Begin</button>
           </div>
           <div>
               <h2>TOP Netflix Films</h2>
-              <ul>
+              <div className="movie-collage">
                 {movies.length > 0 ? (
-                  movies.map((movie) => (
-                    <li key={movie.id} id={movie.id}>
-                      <Link to={`/movie/${movie.id}`}>{movie.title} ({movie.release_year})</Link>
-                    </li>
+                  movies.slice(0, 5).map((movie) => (
+                    <div key={movie.id} className="movie-item">
+                      <Link to={`/movie/${movie.id}`}>
+                        <img src={movie.links[0].url} alt={movie.title} />
+                      </Link>
+                      <p>{movie.title} ({movie.release_year})</p>
+                      <button onClick={() => toggleProviders(movie.id)}>
+                        Watch
+                      </button>
+
+                      {/* Display Provider Links */}
+                      {showProviders[movie.id] && (
+                        <div className="provider-links">
+                          {movie.links.filter(link => link.label === "Provider").map((link) => {
+                            const url = new URL(link.url); // Create a URL object to extract hostname
+                            return (
+                              <div key={link.url}>
+                                <a href={link.url} target="_blank" rel="noopener noreferrer">{url.hostname}</a> {/* Display hostname */}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   ))
                 ) : (
-                  <li>No movies found.</li>
+                  <p>No movies found.</p>
                 )}
-              </ul>
+              </div>
           </div>
       </div>
   );
