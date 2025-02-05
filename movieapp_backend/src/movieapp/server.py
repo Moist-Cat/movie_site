@@ -11,7 +11,7 @@ from flask_classful import FlaskView, route
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import sqlalchemy
-from sqlalchemy import func
+from sqlalchemy import and_, func
 
 # required for fetching the trailer
 from bs4 import BeautifulSoup
@@ -27,6 +27,35 @@ log = logging.getLogger("global")
 app = Flask(__name__)
 CORS(app)
 api = Blueprint("api", __name__, url_prefix="/api")
+
+STATIC_NETFLIX_LIST = {
+    "Better Call Saul": 45,
+    "Arcane: League of Legends": 40,
+    "Black Mirror": 60,
+    "Blue Eye Samurai": 45,
+    "Strappare lungo i bordi": 22,
+    "Monster": 24,
+    "Questo mondo non mi renderà cattivo": 30,
+    "The Crown": 60,
+    "Ripley": 60,
+    "World War II: From the Frontlines": 49,
+    "Dan Da Dan: First Encounter": 83,
+    "La sociedad de la nieve": 144,
+    "Top Boy": 60,
+    "Chef's Table": 50,
+    "Derry Girls": 30,
+    "Maid": 60,
+    "Sex Education": 60,
+    "Ozark": 60,
+    "One Piece": 60,
+    "Archer": 22,
+    "The Remarkable Life of Ibelin": 106,
+    "Fauda": 60,
+    "Cobra Kai": 30,
+    "Im Westen nichts Neues": 148,
+    "Danjon meshi": 26,
+    "The Gentlemen": 50,
+}
 
 
 class ModelSerializer(JSONEncoder):
@@ -206,6 +235,22 @@ class MovieAPIView(APIView):
             .limit(limit)
             .all()
         )
+
+    @route("/list/<provider>/")
+    @protected
+    def landing_page_list(self, provider: str):
+        args = request.args
+
+        limit = min(int(args.get("limit", 50)), 1000)
+
+        if provider == "netflix":
+            return client.get_movie().filter(
+                and_(
+                    Movie.title.in_(STATIC_NETFLIX_LIST.keys()),
+                    Movie.runtime.in_(STATIC_NETFLIX_LIST.values()),
+                )
+            ).limit(limit).all()
+        return []
 
     @route("/<int:id>/trailer/")
     @protected
