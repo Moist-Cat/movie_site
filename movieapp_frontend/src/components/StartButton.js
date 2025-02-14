@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import './StartButton.css'
+import './StartButton.css';
+import Trailer from './Trailer';
 
 const StartButton = ({ onStart }) => {
   const [netflix, setNetflix] = useState([]);
@@ -58,21 +59,19 @@ const StartButton = ({ onStart }) => {
   return (
       <div>
           <div>
-            <h1>Welcome to Movie Recommender!</h1>
-            <button onClick={onStart}>Begin</button>
+            <h1>Welcome to Cinema Picks!</h1>
+            <button onClick={onStart}>Find Your Movie</button>
           </div>
           <div>
               <h2>TOP Netflix Picks</h2>
               <div className="movie-collage">
                 {netflix.length > 0 ? (
                   netflix.slice(0, 5).map((movie) => (
+
                     <div key={movie.id} className="movie-item">
-                      <Link to={`/movie/${movie.id}`}>
-                        <img src={movie.links[0].url} alt={movie.title} />
-                      </Link>
-                      <p>{movie.title} ({movie.release_year})</p>
+                      <Trailer movie={movie} />
                       <button onClick={() => toggleProviders(movie.id)}>
-                        Watch
+                        Links
                       </button>
 
                       {/* Display Provider Links */}
@@ -100,10 +99,8 @@ const StartButton = ({ onStart }) => {
                 {amazon.length > 0 ? (
                   amazon.slice(0, 5).map((movie) => (
                     <div key={movie.id} className="movie-item">
-                      <Link to={`/movie/${movie.id}`}>
-                        <img src={movie.links[0].url} alt={movie.title} />
-                      </Link>
-                      <p>{movie.title} ({movie.release_year})</p>
+                      <Trailer movie={movie} />
+                      {/* Watch */}
                       <button onClick={() => toggleProviders(movie.id)}>
                         Watch
                       </button>

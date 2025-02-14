@@ -3,6 +3,31 @@ import { useParams } from "react-router-dom";
 import { fetchData } from '../api';
 import './MoviePage.css'
 
+function capitalize(val) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+}
+
+function extractDomain(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const parts = hostname.split('.');
+
+    // Handle cases like "www.example.com" or "example.co.uk"
+    let domain = parts.slice(-2).join('.');
+
+    // Extract just the "example" part
+    domain = domain.split('.')[0];
+
+    return domain;
+  } catch (error) {
+    // Handle invalid URLs
+    console.error("Invalid URL:", error);
+    return null; // Or some other appropriate error value
+  }
+}
+
+
 const MoviePage = ({ match }) => {
   const [movie, setMovie] = useState(null);
   const [trailer, setTrailer] = useState(null);
@@ -79,19 +104,25 @@ const MoviePage = ({ match }) => {
     'actor': 'Actors',
     'staff': 'Staff',
     'genre': 'Genre',
-    'provider': 'Available On',
   }
   for (const [key, value] of tag_metadata.entries()) {
+    if (present[key] === undefined) {
+      continue;
+    }
     keywords.push(
       <p><strong>{present[key]}:</strong> {value.join(', ')}</p>
     );
   }
-
+  const providers = []
   for (const link of movie["links"]) {
-      if (link.label === "Provider") {
-          keywords.push(<p><a href={link.url}>{link.url}</a></p>);
-      }
+    if (link.label !== "Provider") {
+      continue
+    };
+    providers.push(
+      <button><a href={link.url}>{capitalize(extractDomain(link.url))}</a></button>
+    );
   }
+  keywords.push(<p><strong>Available On:</strong> {providers}</p>)
 
   return (
     <>

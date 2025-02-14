@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import './Result.css';
+import Trailer from './Trailer' ;
 
 const Result = () => {
   const [movies, setMovies] = useState([]);
@@ -118,36 +119,11 @@ const Result = () => {
         {movies.length > 0 ? (
           movies.slice(0, visibleMovies).map((movie) => (
             <div key={movie.id} className="movie-item">
-                { (trailer && movie.id === trailer.id) ? (
-                  <div className="movie-media-item">
-                    <video
-                        controls
-                        autoplay=""
-                        name="media"
-                        className="movie-media-item"
-                        onClick={(e) => {
-                          if (document.pictureInPictureEnabled) {
-                          e.target.requestPictureInPicture();
-                          }
-                        }}
-                    >
-                      <source src={trailer.url} type="video/mp4" className="movie-media-item" />
-                    </video>
-                  </div>
-                ) : (
-                  <Link to={`/movie/${movie.id}`}>
-                    <img src={movie.links[0].url} alt={movie.title} />
-                  </Link>
-                )}
-              <p>{movie.title} ({movie.release_year})</p>
-              <div className="movie-media-item">
-                <button onClick={() => loadTrailer(movie.id)} disabled={loadingTrailer}>
-                  {setLoadingText(loadingTrailer, trailer_id, trailer, movie.id)}
-                </button>
-              </div>
+                {/* Trailer */}
+                <Trailer movie={movie} />
               {/* Watch Button */}
               <button onClick={() => toggleProviders(movie.id)}>
-                Watch
+                  Links
               </button>
 
               {/* Display Provider Links */}

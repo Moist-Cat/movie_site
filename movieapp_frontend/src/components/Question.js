@@ -11,7 +11,7 @@ const Question = ({ question, onNext }) => {
   return (
     <div>
       <h2>{question.text}</h2>
-      <div style={{"gap": "15px", "display": "flex", "justify-content": "center"}}>
+      <div style={{"gap": "15px", "display": "flex", "justifyContent": "center", "flexWrap": "wrap"}}>
         {question.keywords.map((keyword) => (
           <button key={keyword["name"]} onClick={() => handleSelection(keyword["param"])}>
             {capitalize(keyword["name"])}
