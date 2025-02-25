@@ -1,0 +1,34 @@
+.movie-details {
+  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+
+}
+
+.movie-media {
+  width: 400px;
+  text-align: center;
+  background-color: black;
+}
+
+.movie-media-item {
+  height: 100%;
+  width: 100%;
+}
+
+.movie-media-trailer {
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}

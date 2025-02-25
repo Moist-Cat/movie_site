@@ -1,0 +1,73 @@
+/* styles.css */
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #121212;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background-color: #1e1e1e;
+  padding: 15px;
+  text-align: center;
+  border-bottom: 1px solid #333;
+  position: fixed; /* Fixed position */
+  top: 0; /* Stick to the top */
+  left: 0; /* Align to the left */
+  right: 0; /* Align to the right */
+  z-index: 1000; /* Ensure it's on top of other content */
+}
+
+h1 {
+  margin: 0; /* Remove default margin */
+}
+
+.App {
+  max-width: 1200px;
+  margin: 70px auto; /* Adjust for header height */
+  padding: 20px;
+  background: #1c1c1c;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+button {
+  padding: 10px 15px;
+  margin: 10px 0;
+  background-color: #6200ea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #3700b3;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  padding: 5px;
+  border-bottom: 1px solid #333;
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+.error {
+  color: #ff4081; /* Pink for errors */
+}
+
+.loading {
+  font-style: italic;
+  color: #bbbbbb; /* Light gray for loading */
+}
+
