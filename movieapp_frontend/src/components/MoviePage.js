@@ -27,6 +27,21 @@ function extractDomain(url) {
   }
 }
 
+function crop(text) {
+  const size = 1300;
+  if (text.lenght < size) {
+    return text;
+  }
+  const sub = text.substring(0, size);
+
+  for (let i = size - 1; i >= 0; i--) {
+    if (sub[i] == ".") {
+        return sub.substring(0, i) + "...";
+    }
+  }
+  return sub;
+}
+
 
 const MoviePage = ({ match }) => {
   const [movie, setMovie] = useState(null);
@@ -119,41 +134,46 @@ const MoviePage = ({ match }) => {
       continue
     };
     providers.push(
-      <button><a href={link.url}>{capitalize(extractDomain(link.url))}</a></button>
+      <div><a href={link.url}>{capitalize(extractDomain(link.url))}</a></div>
     );
   }
-  keywords.push(<p><strong>Available On:</strong> {providers}</p>)
+  keywords.push(<div><strong>Available On:</strong> {providers}</div>)
 
   return (
     <>
     <h2>{movie.title}・({movie.release_year})・{movie.runtime} minutes</h2>
-    <div className="movie-details">
-      {movie ? (
-        <>
-          {cover}
-          <div className="movie-media-trailer">
-            {trailer ? (
-              <video controls autoplay="" name="media">
-                <source src={trailer.url} type="video/mp4" className="movie-media-item" />
-              </video>
-            ) : (
-              <div>
-                <button onClick={loadTrailer} disabled={loadingTrailer}>
-                  {loadingTrailer ? 'Loading Trailer...' : 'Load Trailer'}
-                </button>
-                {trailerError && <div className="error">{trailerError}</div>}
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <div>No movie found.</div>
-      )}
-    </div>
+    {cover}
+    {movie ? (
+      <>
+        <div className="movie-media-trailer">
+          {trailer ? (
+            <video controls autoplay="" name="media" className="movie-media-item">
+              <source src={trailer.url} type="video/mp4" />
+            </video>
+          ) : (
+            <div>
+              <button onClick={loadTrailer} disabled={loadingTrailer}>
+                {loadingTrailer ? 'Loading Trailer...' : 'Load Trailer'}
+              </button>
+              {trailerError && <div className="error">{trailerError}</div>}
+            </div>
+          )}
+        </div>
+      </>
+    ) : (
+      <div>No movie found.</div>
+    )}
     <p><strong>Rating:</strong> {movie.rating / 100}</p>
     {keywords}
-    <h2>Description</h2>
-    <p>{movie.description}</p>
+    { movie.description ? (
+        <>
+          <h2>Synopsis</h2>
+          <p>{crop(movie.description)}</p>
+        </>
+        ) : (
+          <></>
+        )
+    }
     </>
   );
 };
