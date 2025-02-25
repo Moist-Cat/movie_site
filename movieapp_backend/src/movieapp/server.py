@@ -39,7 +39,7 @@ STATIC_NETFLIX_LIST = {
     "The Crown": 60,
     "Ripley": 60,
     "World War II: From the Frontlines": 49,
-    "Dan Da Dan: First Encounter": 83,
+    #"Dan Da Dan: First Encounter": 83, #not available
     "La sociedad de la nieve": 144,
     "Top Boy": 60,
     "Chef's Table": 50,

@@ -15,7 +15,10 @@ actors = set()
 for file in data:
     entry = load_file(file)
     title = entry["title"]
-    description = entry.get("description", "")
+    description = entry.get("generated_summary", "")
+    if isinstance(description, dict):
+        # handle AI errors
+        description = description["description"]
     release_year = int(entry["release_year"])
     movie = client.get_or_create_movie(
         title=title,
@@ -27,22 +30,24 @@ for file in data:
     )
     client.session.commit()
     for star in set(entry["actors"]):
-        if star in actors:
-            continue
         star = star.strip()
-        actors.add(star)
-        tag = client.get_or_create_tag(name=star, category="actor")
-        client.session.commit()
+        if star not in actors:
+            actors.add(star)
+            tag = client.get_or_create_tag(name=star, category="actor")
+            client.session.commit()
+        else:
+            tag = client.get_tag(name=star).one()
         client.create_tagged_movie(movie_id=movie.id, tag_id=tag.id)
         client.session.commit()
 
     for star in set(entry["staff"]):
-        if star in actors:
-            continue
         star = star.strip()
-        actors.add(star)
-        tag = client.get_or_create_tag(name=star, category="staff")
-        client.session.commit()
+        if star not in actors:
+            actors.add(star)
+            tag = client.get_or_create_tag(name=star, category="staff")
+            client.session.commit()
+        else:
+            tag = client.get_tag(name=star).one()
         client.create_tagged_movie(movie_id=movie.id, tag_id=tag.id)
         client.session.commit()
 

@@ -132,7 +132,7 @@ class Client:
 
     def search(self, tags, min_rating: float = 0.0, release_year: int = 0):
         """
-        SELECT * FROM movie m JOIN tag t ON m.id = t.movie_ie AND t.name IN {tags} WHERE m.rating > min_rating GROUP BY m.id;
+        SELECT * FROM movie m JOIN tag t ON m.id = t.movie_id AND t.id IN {tags} WHERE m.rating > min_rating GROUP BY m.id;
         """
         return (
             self.get_movie()
