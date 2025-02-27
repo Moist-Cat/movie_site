@@ -36,8 +36,8 @@ JSON_DIR = METADATA
 # id
 FIELDS = (None, None, None, "title", None, "release_year", None, "runtime", None)
 
-def load_file(key):
-    file = JSON_DIR / f"{key}.json"
+def load_file(key, directory=JSON_DIR):
+    file = directory / f"{key}.json"
     try:
         with open(file, encoding="utf-8") as jfile:
             data = json.load(jfile)
@@ -50,8 +50,8 @@ def load_file(key):
 
     return data
 
-def save_file(filename, data=None, force=False):
-    file = JSON_DIR / f"{filename}.json"
+def save_file(filename, data=None, force=False, directory=JSON_DIR):
+    file = directory / f"{filename}.json"
 
     if file.exists() and not force:
         print(f"ERROR - The {file} exists and {force=}")
@@ -63,20 +63,21 @@ def save_file(filename, data=None, force=False):
     return data
 
 
-def get_files() -> list:
+def get_files(directory=JSON_DIR) -> list:
     """
     Get full file path
     """
-    return list(map(lambda file: Path(file).name[:-5], glob(str(JSON_DIR  / "*.json"))))
+    return list(map(lambda file: Path(file).name[:-5], glob(str(directory  / "*.json"))))
 
-def load_json(files=get_files()):
+def load_json(directory=JSON_DIR):
     """
     Load data
     """
     data = {}
+    files = get_files(directory)
     print(f"INFO - Loading {len(list(files))} files")
     for file in sorted(files):
-        game = load_file(file)
+        game = load_file(file, directory=directory)
         if game:
             data[file] = game
         else:
@@ -94,7 +95,7 @@ def save_json(data=None, force=False):
 def mov(filename):
     with open(filename) as file:
         rd = csv.reader(file, delimiter="\t", quotechar='"')
-        for line in rd:
+        for line in enumerate(rd):
             if line[1] != TYPE:
                 continue
             id = line[0]
@@ -112,6 +113,30 @@ def mov(filename):
             with open(mov, "w") as file:
                 json.dump(data, file, indent=4)
 
+            print(f"INFO - Saved {id=}")
+
+def is_good_enough(rate, votes, tags):
+    rate_min = 5
+
+    tags_50k = {"History", "Music", "Musical", "Sport"}
+    tags_35k = {"War", "Documentary", "Western"}
+    tags_remove = {"Film-Noir",}
+
+    if tags_remove.intersection(tags):
+        return False
+    elif tags_50k.intersection(tags):
+        votes_min = 50*1000
+    elif tags_35k.intersection(tags):
+        votes_min = 35*1000
+    else:
+        votes_min = 100*1000
+
+    if rate <= rate_min or votes < votes_min:
+        return False
+
+    return True
+
+
 def ratings(filename):
     ids = set()
     with open(filename) as file:
@@ -126,16 +151,19 @@ def ratings(filename):
             mov = METADATA / Path(id + ".json")
             if not mov.exists():
                 continue
-            if rate <= 5 or votes < 1000:
+
+            with open(mov) as file:
+                data = json.load(file)
+
+            if not is_good_enough(rate, votes, data["tags"]):
                 print(f"WARNING - Deleting {id}")
                 mov.unlink()
                 continue
 
             ids.add(id)
 
-            with open(mov) as file:
-                data = json.load(file)
             data["rating"] = rate
+            data["votes"] = votes
 
             with open(mov, "w") as file:
                 json.dump(data, file, indent=4)
@@ -228,7 +256,7 @@ def covers():
             continue
         try:
             res = requests.get(url, headers=HEADERS)
-            soup = bs(res.text, "lxml")
+            soup = bs(res.text, "html.parser")
             cover = soup.findAll("img")[1]["src"]
             data["cover"] = cover
         except Exception as exc:
@@ -263,25 +291,18 @@ def amazon():
         url = URL.format(title=query)
         print(url)
 
-        try:
-            session.get("https://www.amazon.com").raise_for_status()
-        except Exception as exc:
-            print(f"ERROR - {exc}")
+        res, soup = get_data(url, headers=session.headers)
+        if not soup:
             continue
 
-        try:
-            res = session.get(url)
-            soup = bs(res.text, "lxml")
-            if "Prime Video" not in soup.text:
-                print(f"ERROR - No valid links {item}")
-                name = str(item) + ".html"
-                with open(FAILED / name, "w") as file:
-                    file.write(res.text)
-                continue
-        except Exception as exc:
-            print(f"ERROR - {item}")
-            print(exc)
+        if "Prime Video" not in soup.text:
+            print(f"ERROR - No valid links {item}")
+            name = str(item) + ".html"
+            with open(FAILED / name, "w") as file:
+                file.write(res.text)
             continue
+
+        time.sleep(5)
         
         movies = soup.findAll(class_=class_)
         id = item
@@ -308,6 +329,8 @@ def amazon():
                     dvd_link = link
                     continue
                 if link not in data["links"]:
+                    if isinstance(data["links"], str):
+                        data["links"] = [data["links"]]
                     data["links"].append(link)
                 data["tags"].append("amazon")
                 print(f"INFO - Got valid link for {id}")
@@ -318,7 +341,7 @@ def amazon():
             if dvd_link and not data["links"]:
                 print(f"WARNING - Adding dvd link to {id}")
                 dvds.append(id)
-                data["links"] = dvd_link
+                data["links"] = [dvd_link]
 
             print(f"WARNING - Falied to get Amazon link for {id}")
             name = str(id) + ".html"
@@ -333,18 +356,19 @@ def amazon():
         json.dump(dvds, jfile, ensure_ascii=False, indent="\t")
 
 
-def get_data(url):
-    WAIT = 1
+def get_data(url, headers=None):
+    headers = headers or {}
+    WAIT = 10
     try:
-        res = requests.get(url)
+        res = requests.get(url, headers=headers, timeout=30)
         res.raise_for_status()
         time.sleep(WAIT)
     except Exception as exc:
-        print(f"ERROR - {exc} {BASE_URL=}")
+        print(f"ERROR - {exc}")
         
         return (None, None)
 
-    soup = bs(res.text, "lxml")
+    soup = bs(res.text, "html.parser")
 
     return res, soup
 
@@ -353,115 +377,147 @@ def netflix():
     BASE_URL = "https://flixwatch.co/"
     URL = BASE_URL + "?s={title}&id={token}"
 
-    WAIT = 1
+    count = 0
 
     session = requests.session()
     session.headers.update(HEADERS)
 
     for index, item in enumerate(get_files()):
-        ua = f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{index}.0.0.0 Safari/537.36"
-        session.headers["User-Agent"] = ua
+        try:
+            ua = f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{index}.0.0.0 Safari/537.36"
+            session.headers["User-Agent"] = ua
 
-        id = item
-        data = load_file(item)
-        title = data["title"]
-        if "netflix" in data["tags"]:
-            continue
-        url = BASE_URL
-        res, soup = get_data(url)
-        if not res:
-            continue
-        hidden = soup.find(type="hidden")
-        token = hidden["value"]
-
-        url = URL.format(title=title, token=token)
-
-        res, soup = get_data(url)
-
-        print(f"INFO - Trying {id=}")
-
-        content = soup.find(id="content")
-
-        if not content:
-            print(f"INFO - Failed to find links for {id=}")
-            continue
-
-        for link in content.findAll("a"):
-            if not f'({data["release_year"]})' in link.text:
+            id = item
+            data = load_file(item)
+            title = data["title"]
+            if "netflix" in data["tags"]:
                 continue
-
-            url = link["href"]
-            print(f"INFO - Found {url}")
-
-            main_res, main_soup = get_data(url)
-
-            country_list = main_soup.find(id="amp-list")
-            if country_list is None:
-                print("ERROR - Couldn't find country list {id=}")
-                continue
-            url = country_list["src"]
+            url = BASE_URL
             res, soup = get_data(url)
+            if not res:
+                continue
+            hidden = soup.find(type="hidden")
+            token = hidden["value"]
+
+            url = URL.format(title=title, token=token)
+
+            res, soup = get_data(url)
+
+            print(f"INFO - Trying {id=}")
+
             try:
-                countries = res.json()
+                content = soup.find(id="content")
             except Exception as exc:
-                print(exc, url, res.text)
+                print(exc)
+
+            if not content:
+                print(f"INFO - Failed to find links for {id=}")
                 continue
 
-            if "nexflix" not in data:
-                data["netflix"] = []
-            for country in countries["items"]:
-                try:
-                    slug = country["url"].split("/")[-2]
-                except IndexError:
-                    print(f"ERROR - Failed to get country {country=}")
+            for link in content.findAll("a"):
+                # check the release year is correct
+                if not f'({data["release_year"]})' in link.text:
                     continue
-                if slug not in data["netflix"]:
-                    data["netflix"].append(slug)
-                print(f"INFO - Country for {id=} {country}")
 
-            status = main_soup.find(id="streaming-status")
-            if not status:
-                print(f"ERROR - Failed to get streaming info {id=}")
-                name = str(id) + ".html"
-                with open(FAILED / name, "w") as file:
-                    file.write(main_res.text)
-                continue
-            
-            url = status["src"]
-            res, soup = get_data(url)
+                url = link["href"]
+                print(f"INFO - Found {url}")
+                count += 1
 
-            try:
-                netflix = res.json()
-            except Exception as exc:
-                print(exc, url, res.text)
-                continue
+                main_res, main_soup = get_data(url)
 
-            for item in netflix["items"]:
-                if item["title"] == "Watch on Netflix":
-                    stream_url =  item["url"][0]
-                    print(f"INFO - Added {stream_url}")
-                    if stream_url not in data["links"]:
-                        data["links"].append(stream_url)
-                    data["tags"].append("netflix")
-            break
-        mov = METADATA / (str(id) + ".json")
-        save_file(id, data, force=True)
+                country_list = main_soup.find(id="amp-list")
+                if country_list is None:
+                    print(f"ERROR - Couldn't find country list {id=}")
+                    continue
+                url = country_list["src"]
+                res, soup = get_data(url)
+                try:
+                    countries = res.json()
+                except Exception as exc:
+                    print(exc, url, res.text)
+                    continue
+
+                if "nexflix" not in data:
+                    data["netflix"] = []
+                for country in countries["items"]:
+                    try:
+                        slug = country["url"].split("/")[-2]
+                    except IndexError:
+                        print(f"ERROR - Failed to get country {country=}")
+                        continue
+                    if slug not in data["netflix"]:
+                        data["netflix"].append(slug)
+                    print(f"INFO - Country for {id=} {country}")
+
+                status = main_soup.find(id="streaming-status")
+                if not status:
+                    print(f"ERROR - Failed to get streaming info {id=}")
+                    name = str(id) + ".html"
+                    with open(FAILED / name, "w") as file:
+                        file.write(main_res.text)
+                    continue
+                
+                url = status["src"]
+                res, soup = get_data(url)
+
+                try:
+                    netflix = res.json()
+                except Exception as exc:
+                    print(exc, url, res.text)
+                    continue
+
+                for item in netflix["items"]:
+                    if item["title"] == "Watch on Netflix":
+                        stream_url =  item["url"][0]
+                        print(f"INFO - Added {stream_url}")
+                        if stream_url not in data["links"]:
+                            data["links"].append(stream_url)
+                        data["tags"].append("netflix")
+                break
+            mov = METADATA / (str(id) + ".json")
+            save_file(id, data, force=True)
+        except Exception as exc:
+            print(exc)
+
+    print(count)
+
+def get_cast(data):
+    cast = []
+    for key, value in data["props"]["pageProps"]["mappedData"].items():
+        if "{" not in value:
+            continue
+        try:
+            data = json.loads(value)
+            if "castAndCrew" in data:
+                for key, value in data["castAndCrew"].items():
+                    if not value:
+                        continue
+                    for item in value:
+                        cast.append(item["name"])
+        except json.decoder.JSONDecodeError:
+            pass
+
+    return cast
 
 
 def valid_hbo(movie: dict, data):
+    """
+    Extra HTTP call to ensure it's the movie we want
+    """
     url = movie
     res, soup = get_data(url)
     
     if not soup:
         return False
 
-    cast = soup.find(class_="readMore")
-    
-    if not cast:
-        print(f"WARNING - No cast for {movie=}")
+    cast = get_cast(json.loads(soup.find(id="__NEXT_DATA__").text))
+    try:
+        if not data["release_year"] == soup.find("meta", {"property": "og:video:release_date"})["content"]:
+            print(f"Wrong year for {data} at {movie}")
+            return 
+    except Exception as exc:
+        print("ERROR - No release year", exc)
         return False
-
-    cast = cast.text
 
     pred = any(actor in cast for actor in data["actors"]) or any(staff in cast for staff in data["staff"])
     assertion = any(actor in cast for actor in data["actors"]) and any(staff in cast for staff in data["staff"])
@@ -480,10 +536,21 @@ def hbo_max():
     res, soup = get_data(url)
     links = soup.find(class_="my-5 container").findAll("a")
     counter = 0
+    bad_counter = 0
+
+    ids = set()
 
     for id in get_files():
         data = load_file(id)
         if "max" in data["tags"]:
+            for link in data["links"].copy():
+                if "max" in link and not valid_hbo(link, data):
+                    mov = METADATA / Path(id + ".json")
+                    data["links"].remove(link)
+                    if "max" in data["tags"]:
+                        data["tags"].remove("max")
+                    bad_counter += 1
+                    print(data, "is not valid hbo")
             continue
         for movie in links:
             link = BASE_URL + movie["href"]
@@ -496,16 +563,57 @@ def hbo_max():
                     data["links"].append(link)
                 data["tags"].append("max")
                 counter += 1
+                ids.add(id)
                 break
         mov = METADATA / (str(id) + ".json")
         save_file(id, data, force=True)
+    print("hbo:", counter, bad_counter)
 
-#mov(MOVIES)
-#ratings(RATINGS)
-#actors()
-#fix_and_add_names()
-#covers()
-#amazon()
-# assert actors
-#netflix()
-#hbo_max()
+    # delete non-hbo movies
+    #for id in get_files():
+    #    mov = METADATA / Path(id + ".json")
+    #    if id not in ids:
+    #        mov.unlink()
+
+
+def descriptions():
+    BASE_URL = "https://imdb.com/title/{id}/plotsummary/"
+    for id in get_files():
+        data = load_file(id)
+        if "description" in data:
+            print(f"Skipping {id}")
+            continue
+
+        url = BASE_URL.format(id=id)
+        res, soup = get_data(url, headers={"User-Agent": ""})
+        try:
+            desc = soup.find(**{"data-testid":"sub-section-synopsis"}).text
+        except Exception as exc:
+            print(exc)
+            # no synopsis
+            try:
+                desc = soup.find(**{"data-testid":"sub-section-summaries"}).findAll("li")[1].next.next.next.next.next.next.text
+            except Exception as exc:
+                print(exc)
+                continue
+            # continue as usual if we got either synopsis or summary
+
+        data["description"] = desc
+
+        print(f"Description {id}: {desc}")
+
+        save_file(id, data, force=True)
+
+def run():
+    #mov(MOVIES)
+    #ratings(RATINGS)
+    #actors()
+    #fix_and_add_names()
+    #covers()
+    #descriptions()
+    #amazon()
+    #hbo_max()
+    netflix()
+
+if __name__ == "__main__":
+    run()

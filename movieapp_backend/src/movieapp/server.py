@@ -1,6 +1,7 @@
 import os
-import hashlib
+import datetime
 from functools import wraps
+import json
 from json.encoder import JSONEncoder
 import re
 import logging
@@ -10,9 +11,14 @@ from flask_classful import FlaskView, route
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import sqlalchemy
+from sqlalchemy import and_, func
+
+# required for fetching the trailer
+from bs4 import BeautifulSoup
+import requests
 
 from movieapp.api import Client
-from movieapp.db import Base
+from movieapp.db import Base, Movie, LinkLabel, TaggedMovie, Tag
 from movieapp.conf import settings
 from movieapp.log import logged
 
@@ -22,11 +28,44 @@ app = Flask(__name__)
 CORS(app)
 api = Blueprint("api", __name__, url_prefix="/api")
 
+STATIC_NETFLIX_LIST = {
+    "Better Call Saul": 45,
+    "Arcane: League of Legends": 40,
+    "Black Mirror": 60,
+    "Blue Eye Samurai": 45,
+    "Strappare lungo i bordi": 22,
+    "Monster": 24,
+    "Questo mondo non mi renderà cattivo": 30,
+    "The Crown": 60,
+    "Ripley": 60,
+    "World War II: From the Frontlines": 49,
+    #"Dan Da Dan: First Encounter": 83, #not available
+    "La sociedad de la nieve": 144,
+    "Top Boy": 60,
+    "Chef's Table": 50,
+    "Derry Girls": 30,
+    "Maid": 60,
+    "Sex Education": 60,
+    "Ozark": 60,
+    "One Piece": 60,
+    "Archer": 22,
+    "The Remarkable Life of Ibelin": 106,
+    "Fauda": 60,
+    "Cobra Kai": 30,
+    "Im Westen nichts Neues": 148,
+    "Danjon meshi": 26,
+    "The Gentlemen": 50,
+}
+
+
 class ModelSerializer(JSONEncoder):
     def default(self, o):
         if isinstance(o, Base):
             return o.as_dict()
+        if isinstance(o, datetime.datetime):
+            return o.strftime("%Y-%m-%d")
         return super().default(o)
+
 
 encoder = ModelSerializer()
 
@@ -43,10 +82,12 @@ def output_json(data, code, headers=None):
     response = make_response(dumped, code, headers)
     return response
 
+
 def protected(decorated):
     """
-    Protect a method against db failured
+    Protect a method against db failure
     """
+
     @wraps(decorated)
     def internal(*args, **kwargs):
         try:
@@ -62,6 +103,7 @@ def protected(decorated):
             raise APIException()
 
     return internal
+
 
 @logged
 class APIView(FlaskView):
@@ -92,14 +134,11 @@ class APIView(FlaskView):
         return self.get_queryset("get").all()
 
     @protected
-    def get(self, id: str):
-        if not id.isdigit():
-            raise APIException("The ID field must be an integer")
-        id = int(id)
+    def get(self, id: int):
         return self.get_queryset("get", **{self.pk_field: id}).one()
 
     @protected
-    def update(self, id):
+    def put(self, id: int):
         # here I would get the post data and update stuff
         kwargs = request.json
 
@@ -109,12 +148,13 @@ class APIView(FlaskView):
         return nu_obj.as_dict()
 
     @protected
-    def delete(self, id):
+    def delete(self, id: int):
         obj = self.get_queryset("get", **{self.pk_field: id}).one()
 
         client.session.remove(obj)
 
         return {}
+
 
 class APIException(HTTPException):
     code = 400
@@ -154,10 +194,12 @@ class APIException(HTTPException):
             "Content-Type": "application/json",
         }
 
+
 # error handling
 @app.errorhandler(APIException)
 def handle_exception(e):
     return output_json(e.get_body(), e.code, e.get_headers())
+
 
 @app.errorhandler(sqlalchemy.exc.NoResultFound)
 def handle_not_found(e):
@@ -165,8 +207,13 @@ def handle_not_found(e):
     e.code = 404
     return output_json(e.get_body(), e.code, e.get_headers())
 
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    client.session.remove()
+
+
 class MovieAPIView(APIView):
-    
     @protected
     def index(self):
         args = request.args
@@ -177,28 +224,108 @@ class MovieAPIView(APIView):
             return self.get_queryset("get").offset(offset).limit(limit).all()
 
         tags = args.get("tags", "")
-        tags = map(int, tags.split(","))
+        tags = list(map(int, tags.split(",")))
 
-        return client.search(tags=tags).offset(offset).limit(limit).all()
+        release_year = int(args.get("release_year", 0))
 
-    
+        return (
+            client.search(tags=tags, release_year=release_year)
+            .order_by(Movie.votes.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+    @route("/list/<provider>/")
+    @protected
+    def landing_page_list(self, provider: str):
+        args = request.args
+
+        limit = min(int(args.get("limit", 50)), 1000)
+
+        if provider == "netflix":
+            return client.get_movie().filter(
+                and_(
+                    Movie.title.in_(STATIC_NETFLIX_LIST.keys()),
+                    Movie.runtime.in_(STATIC_NETFLIX_LIST.values()),
+                )
+            ).limit(limit).all()
+        return []
+
+    @route("/<int:id>/trailer/")
+    @protected
+    def trailer(self, id: int):
+        """
+        Get the trailer of a movie by grabbing it from imdb dynamically.
+        The link expires so we have to do this every time.
+        """
+        obj = self.get_queryset("get", **{self.pk_field: id}).one()
+        page = None
+        for link in obj.links:
+            if link.label == LinkLabel.METADATA and "imdb" in link.url:
+                page = link.url
+                break
+
+        if page is None:
+            raise APIException(f"No trailer available for {obj.title}")
+
+        res = requests.get(page, headers={"User-Agent": ""})
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        next_data = json.loads(soup.find(id="__NEXT_DATA__").text)
+
+        trailer_url = next_data["props"]["pageProps"]["aboveTheFoldData"][
+            "primaryVideos"
+        ]["edges"][0]["node"]["playbackURLs"][0]["url"]
+
+        return {
+            # it might look silly but we require it to identify the movie after calling
+            "id": obj.id,
+            "url": trailer_url,
+        }
+
+
 class TagAPIView(APIView):
-
     @protected
     def index(self):
         args = request.args
         limit = min(int(args.get("limit", 50)), 1000)
         offset = int(args.get("offset", 0))
 
-         
         kwargs = {}
         if "category" in args:
             kwargs = {"category": args["category"]}
-        return self.get_queryset("get", **kwargs).offset(offset).limit(limit).all()
+        return (
+            self.get_queryset("get", **kwargs)
+            .join(TaggedMovie, Tag.id == TaggedMovie.tag_id)
+            .group_by(Tag.id)
+            .order_by(func.count(Tag.id).desc())
+            .limit(limit)
+            .all()
+        )
+
+    @protected
+    def name(self, label):
+        return self.get_queryset("get", name=label).one()
 
 
 class LinkAPIView(APIView):
     pass
+
+
+@logged
+class TrailerAPIview(FlaskView):
+    representations = {"application/json": output_json}
+    model = None
+    pk_field = "id"
+    excluded_methods = ["get_queryset"]
+    route_base = None
+
+    def get(self, id: int):
+        self.get_queryset(
+            "get",
+        )
+
 
 # populate urls
 _loc = locals().copy()
@@ -210,6 +337,7 @@ for namespace in _keys:
             view.register(api)
 
 app.register_blueprint(api)
+
 
 def runserver():
     app.run(port=5051)

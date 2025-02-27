@@ -65,9 +65,14 @@ class Base:
 
 class Movie(Base):
     title = Column(String(200), nullable=False)
+    description = Column(String(70000), default="")
     runtime = Column(Integer, nullable=False)
-    release_year = Column(Integer, nullable=False) 
-    rating = Column(Integer, CheckConstraint('rating >= 0 AND rating <= 1000'), default=0)
+    release_year = Column(Integer, nullable=False)
+    # we won't allow floating point results so we coerce the type to integer
+    rating = Column(
+        Integer, CheckConstraint("rating >= 0 AND rating <= 1000"), default=0
+    )
+    votes = Column(Integer, default=0)
 
     links = relationship(
         "Link",
@@ -81,6 +86,14 @@ class Movie(Base):
         secondary="tagged_movie",
         back_populates="movies",
     )
+
+    def as_dict(self):
+        data = super().as_dict()
+        data["tags"] = [tag.as_dict() for tag in self.tags]
+        data["links"] = [link.as_dict() for link in self.links]
+
+        return data
+
 
 class Tag(Base):
     """
@@ -101,15 +114,25 @@ class TaggedMovie(Base):
     movie_id = Column(None, ForeignKey("movie.id"), nullable=False)
     tag_id = Column(None, ForeignKey("tag.id"), nullable=False)
 
+
+class LinkLabel:
+
+    METADATA = "Metadata"
+    PROVIDER = "Provider"
+    COVER = "Cover"
+
+
 class Link(Base):
     """
     Metadata for movies with an URL
     """
+
     label = Column(String(100), nullable=False)
     url = Column(String(2048), nullable=False)
 
-    movie_id = Column(None, ForeignKey("movie.id", ondelete='CASCADE'), nullable=False)
+    movie_id = Column(None, ForeignKey("movie.id", ondelete="CASCADE"), nullable=False)
     movie = relationship(Movie, back_populates="links")
+
 
 def create_db(name=settings.DATABASES["default"]["engine"]):
     """
@@ -120,6 +143,7 @@ def create_db(name=settings.DATABASES["default"]["engine"]):
     Base.metadata.create_all(engine)
 
     return str(engine.url)
+
 
 def drop_db(name=settings.DATABASES["default"]["engine"]):
     engine = create_engine(name)
