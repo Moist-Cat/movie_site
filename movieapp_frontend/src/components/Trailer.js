@@ -15,6 +15,9 @@ const Trailer = ({movie}) => {
     }
 
     const setLoadingText = (loadingTrailer, movie_id, trailer, trailer_id) => {
+        if (trailerError) {
+             return "Failed to load trailer!";
+        }
         if (loadingTrailer && movie_id === trailer_id) {
           return 'Loading Trailer...';
         }
