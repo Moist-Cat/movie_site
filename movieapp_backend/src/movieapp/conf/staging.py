@@ -9,14 +9,13 @@ DEBUG = True
 DATABASES = {
     "test": {
         "engine": f"sqlite:///{TEST_DIR}/test_db.sqlite",
-        "config": {
-            "isolation_level": "AUTOCOMMIT",
-        },
+        "config": {"autocommit": True},
     },
     "default": {
-        "engine": f"postgresql+psycopg://movieapp:movieapp@127.0.0.1:5432",
+        "engine": "mysql+pymysql://drycat:movieapp@drycat.mysql.pythonanywhere-services.com/drycat$movieapp",
         "config": {
-            "echo": True
-        }
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+        },
     },
 }

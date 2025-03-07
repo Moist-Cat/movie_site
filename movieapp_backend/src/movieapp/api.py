@@ -30,15 +30,15 @@ URL = DB["engine"]
 @logged
 class Client:
     def __init__(self, url=URL, config=None):
-        config = config or {}
+        config = config or DB.get("config", {})
         self.url = url
         self.config = config
-        self.logger.info("Started %s. Engine: %s", self.__class__.__name__, URL)
+        self.logger.info("Started %s. Engine: %s", self, URL)
 
-        self.engine = create_engine(url)
+        self.engine = create_engine(url, **config)
 
         self.session = scoped_session(
-            sessionmaker(bind=self.engine, **config)
+            sessionmaker(bind=self.engine)
         )  # pylint: --disable=C0103
 
     def __delete__(self, obj):
