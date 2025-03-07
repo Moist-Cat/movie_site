@@ -5,7 +5,7 @@ DEBUG = False
 
 # Database
 DATABASES = {
-        "default": {
-            "engine": f"postgresql:///movieapp:password@host/movieapp",
-        }
+    "default": {
+        "engine": f"postgresql:///movieapp:password@host/movieapp",
+    }
 }
