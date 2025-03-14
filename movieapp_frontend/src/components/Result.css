@@ -16,7 +16,7 @@
   border-radius: 8px;
 }
 
-.movie-media-item video {
+.movie-media-item iframe {
   width: 100%;
   height: auto;
 }
