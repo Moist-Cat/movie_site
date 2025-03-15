@@ -62,7 +62,7 @@ const MoviePage = ({ match }) => {
     const fetchMovie = async () => {
       setLoading(true);
       try {
-        const { data } = await fetchData(url + `/api/movie/${movieId}/`);
+        const { data } = await fetchData(`/api/movie/${movieId}/`);
         setMovie(data);
       } catch (err) {
         setError(err.message);
@@ -115,7 +115,7 @@ const MoviePage = ({ match }) => {
   let cover = null;
   for (const link of movie.links) {
     if (link.label === "Cover") {    
-        cover = <img alt="cover" src={link.url} height="281" width="190"/>;
+        cover = <img key={link.url} alt="cover" src={link.url} height="281" width="190"/>;
     }
   }
 
@@ -130,7 +130,7 @@ const MoviePage = ({ match }) => {
       continue;
     }
     keywords.push(
-      <p><strong>{present[key]}:</strong> {value.join(', ')}</p>
+      <p key={present[key]}><strong>{present[key]}:</strong> {value.join(', ')}</p>
     );
   }
   const providers = []
@@ -139,10 +139,10 @@ const MoviePage = ({ match }) => {
       continue
     };
     providers.push(
-      <div><a href={link.url}>{capitalize(extractDomain(link.url))}</a></div>
+      <div key={link.url}><a href={link.url}>{capitalize(extractDomain(link.url))}</a></div>
     );
   }
-  keywords.push(<div><strong>Available On:</strong> {providers}</div>)
+  keywords.push(<div key={providers}><strong>Available On:</strong> {providers}</div>)
 
   return (
     <>
