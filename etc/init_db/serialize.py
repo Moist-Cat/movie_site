@@ -57,7 +57,13 @@ for file in data:
     for link in entry["links"]:
         client.create_link(movie=movie, url=link, label="Provider")
 
+    trailer = entry.get("trailer", None)
+    if trailer:
+        client.create_link(movie=movie, url=trailer, label="Trailer")
+
     client.create_link(movie=movie, url=f"https://imdb.com/title/{file}/", label="Metadata")
+
+
 
     for tag_name in set(entry["tags"]):
         category = "genre"

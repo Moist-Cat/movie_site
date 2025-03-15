@@ -11,7 +11,7 @@ from flask_classful import FlaskView, route
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import sqlalchemy
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, text, select
 
 # required for fetching the trailer
 from bs4 import BeautifulSoup
@@ -39,7 +39,7 @@ STATIC_NETFLIX_LIST = {
     "The Crown": 60,
     "Ripley": 60,
     "World War II: From the Frontlines": 49,
-    #"Dan Da Dan: First Encounter": 83, #not available
+    # "Dan Da Dan: First Encounter": 83, #not available
     "La sociedad de la nieve": 144,
     "Top Boy": 60,
     "Chef's Table": 50,
@@ -244,45 +244,18 @@ class MovieAPIView(APIView):
         limit = min(int(args.get("limit", 50)), 1000)
 
         if provider == "netflix":
-            return client.get_movie().filter(
-                and_(
-                    Movie.title.in_(STATIC_NETFLIX_LIST.keys()),
-                    Movie.runtime.in_(STATIC_NETFLIX_LIST.values()),
+            return (
+                client.get_movie()
+                .filter(
+                    and_(
+                        Movie.title.in_(STATIC_NETFLIX_LIST.keys()),
+                        Movie.runtime.in_(STATIC_NETFLIX_LIST.values()),
+                    )
                 )
-            ).limit(limit).all()
+                .limit(limit)
+                .all()
+            )
         return []
-
-    @route("/<int:id>/trailer/")
-    @protected
-    def trailer(self, id: int):
-        """
-        Get the trailer of a movie by grabbing it from imdb dynamically.
-        The link expires so we have to do this every time.
-        """
-        obj = self.get_queryset("get", **{self.pk_field: id}).one()
-        page = None
-        for link in obj.links:
-            if link.label == LinkLabel.METADATA and "imdb" in link.url:
-                page = link.url
-                break
-
-        if page is None:
-            raise APIException(f"No trailer available for {obj.title}")
-
-        res = requests.get(page, headers={"User-Agent": ""})
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        next_data = json.loads(soup.find(id="__NEXT_DATA__").text)
-
-        trailer_url = next_data["props"]["pageProps"]["aboveTheFoldData"][
-            "primaryVideos"
-        ]["edges"][0]["node"]["playbackURLs"][0]["url"]
-
-        return {
-            # it might look silly but we require it to identify the movie after calling
-            "id": obj.id,
-            "url": trailer_url,
-        }
 
 
 class TagAPIView(APIView):
@@ -291,10 +264,23 @@ class TagAPIView(APIView):
         args = request.args
         limit = min(int(args.get("limit", 50)), 1000)
         offset = int(args.get("offset", 0))
+        movies_containing_tag = args.get("containing", None)
 
         kwargs = {}
         if "category" in args:
             kwargs = {"category": args["category"]}
+        valid_alpha = (
+            args.get("category", "").isalpha() and args.get("containing", "").isalnum()
+        )
+        if movies_containing_tag and "category" in args and valid_alpha:
+            return client.session.scalars(
+                # extra join; first join is not required because we have the provider's tag id
+                select(Tag).from_statement(
+                    text(
+                        f"SELECT t2.id, t2.name, t2.category FROM tag t1 JOIN tagged_movie tm1 ON t1.id = tm1.tag_id JOIN tagged_movie tm2 ON tm1.movie_id = tm2.movie_id join tag t2 ON tm2.tag_id = t2.id WHERE t1.id = {movies_containing_tag} AND t2.category = '{args['category']}' GROUP BY t2.id;"
+                    )
+                )
+            ).all()
         return (
             self.get_queryset("get", **kwargs)
             .join(TaggedMovie, Tag.id == TaggedMovie.tag_id)
