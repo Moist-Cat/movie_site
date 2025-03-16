@@ -3,12 +3,17 @@ import { useNavigate } from "react-router-dom";
 
 import StartButton from './StartButton';
 import Question from './Question';
-import Result from './Result';
+import { fetchData } from '../api';
 
 
 const questions = [
-  { id: 1, text: 'Select a streaming service', keywords: null },
-  { id: 2, text: 'What mood or genre are you in the mood for?', keywords: null },
+  { id: 1, text: 'Select a streaming service', keywords: null, endpoint: null},
+  { 
+      id: 2,
+      text: 'What mood or genre are you in the mood for?',
+      keywords: null,
+      endpoint: (provider_id) => `/api/tag/?category=genre&limit=12&containing=${provider_id}`
+  }
 ];
 
 const Root = () => {
@@ -16,35 +21,18 @@ const Root = () => {
     const [selectedKeywords, setSelectedKeywords] = useState([]);
 
     const [tags, setTags] = useState(null);
-    const [genres, setGenres] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const navigate = useNavigate();
 
-    let url = process.env.REACT_APP_API_URL;
-    if (url === undefined) {
-        url = "http://localhost:5051";
-    }
-
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchTags = async () => {
             try {
                 setLoading(true);
-                const response1 = fetch(url + '/api/tag/?category=provider&limit=10');
-                const response2 = fetch(url + '/api/tag/?category=genre&limit=12');
+                const { data } = await fetchData('/api/tag/?category=provider&limit=10');
 
-                const [res1, res2] = await Promise.all([response1, response2]);
-
-                if (!res1.ok || !res2.ok) {
-                    throw new Error('Network response was not ok');
-                }
-
-                const tags = await res1.json();
-                const genres = await res2.json();
-
-                setTags(tags);
-                setGenres(genres);
+                setTags(data);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -52,43 +40,31 @@ const Root = () => {
             }
         };
 
-        fetchData();
+        fetchTags();
     }, []);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
 
     let tag_names = [];
-    let genre_names = [];
 
     for (let i = 0; i < tags.length; i++) {
         tag_names.push(tags[i]);
         tags[i].param = tags[i]["id"];
     }
-    for (let i = 0; i < genres.length; i++) {
-        genre_names.push(genres[i]);
-        genres[i].param = genres[i]["id"];
-    }
 
     questions[0].keywords = tag_names;
-    questions[1].keywords = genre_names;
+    questions[1].keywords = null;
 
     const handleStart = () => setStep(1);
   
     const handleNext = (keywords) => {
-        setSelectedKeywords([...selectedKeywords, ...keywords]);
         setStep(step + 1);
         if (step >= questions.length) {
             navigate("search?q=" + selectedKeywords.concat(keywords).join(","));
         }
+        setSelectedKeywords([...selectedKeywords, ...keywords]);
     };
-
-    const handleRestart = () => {
-        setStep(0);
-        setSelectedKeywords([]);
-    };
-
-    const last = () => navigate("/search");
 
     const renderContent = () => {
         if (step === 0) {

@@ -62,7 +62,7 @@ const MoviePage = ({ match }) => {
     const fetchMovie = async () => {
       setLoading(true);
       try {
-        const { data } = await fetchData(url + `/api/movie/${movieId}/`);
+        const { data } = await fetchData(`/api/movie/${movieId}/`);
         setMovie(data);
       } catch (err) {
         setError(err.message);
@@ -75,19 +75,24 @@ const MoviePage = ({ match }) => {
 
   const loadTrailer = async () => {
     setLoadingTrailer(true);
-    setTrailerError(null);
-    try {
-      const trailer_response = await fetch(url + `/api/movie/${movieId}/trailer/`);
-      if (!trailer_response.ok) {
-        throw new Error('Failed to load trailer');
+
+    let code = null;
+    for (const link of movie.links) {
+      if (link.label === "Trailer") {
+          for (const chunk of link.url.split("/")) {
+              code = chunk;
+          };
       }
-      const trailer_data = await trailer_response.json();
-      setTrailer(trailer_data);
-    } catch (err) {
-      setTrailerError(err.message);
-    } finally {
-      setLoadingTrailer(false);
     }
+
+    if (code) {
+        setTrailer({"code": code, "id": movie.id});
+    }
+    else {
+       setTrailerError("No trailer available!");
+    }
+
+    setLoadingTrailer(false);
   };
 
   if (loading) {
@@ -110,7 +115,7 @@ const MoviePage = ({ match }) => {
   let cover = null;
   for (const link of movie.links) {
     if (link.label === "Cover") {    
-        cover = <img alt="cover" src={link.url} height="281" width="190"/>;
+        cover = <img key={link.url} alt="cover" src={link.url} height="281" width="190"/>;
     }
   }
 
@@ -125,7 +130,7 @@ const MoviePage = ({ match }) => {
       continue;
     }
     keywords.push(
-      <p><strong>{present[key]}:</strong> {value.join(', ')}</p>
+      <p key={present[key]}><strong>{present[key]}:</strong> {value.join(', ')}</p>
     );
   }
   const providers = []
@@ -134,10 +139,10 @@ const MoviePage = ({ match }) => {
       continue
     };
     providers.push(
-      <div><a href={link.url}>{capitalize(extractDomain(link.url))}</a></div>
+      <div key={link.url}><a href={link.url}>{capitalize(extractDomain(link.url))}</a></div>
     );
   }
-  keywords.push(<div><strong>Available On:</strong> {providers}</div>)
+  keywords.push(<div key={providers}><strong>Available On:</strong> {providers}</div>)
 
   return (
     <>
@@ -147,9 +152,7 @@ const MoviePage = ({ match }) => {
       <>
         <div className="movie-media-trailer">
           {trailer ? (
-            <video controls autoplay="" name="media" className="movie-media-item">
-              <source src={trailer.url} type="video/mp4" />
-            </video>
+                <iframe src={`https://www.youtube.com/embed/${trailer.code}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
           ) : (
             <div>
               <button onClick={loadTrailer} disabled={loadingTrailer}>

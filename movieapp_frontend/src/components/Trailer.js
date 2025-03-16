@@ -15,6 +15,9 @@ const Trailer = ({movie}) => {
     }
 
     const setLoadingText = (loadingTrailer, movie_id, trailer, trailer_id) => {
+        if (trailerError) {
+             return trailerError;
+        }
         if (loadingTrailer && movie_id === trailer_id) {
           return 'Loading Trailer...';
         }
@@ -28,47 +31,40 @@ const Trailer = ({movie}) => {
         }
     }
 
-    const loadTrailer = async (movieId) => {
+    const loadTrailer = async (movie) => {
       if (trailer) {
         setTrailer(null);
-        if (trailer_id === movieId) {
+        if (trailer_id === movie.id) {
             return;
         }
       }
-      setTrailerId(movieId);
+      setTrailerId(movie.id);
       setLoadingTrailer(true);
-      setTrailerError(null);
-      try { 
-        const trailer_response = await fetch(url + `/api/movie/${movieId}/trailer/`);
-        if (!trailer_response.ok) {
-          throw new Error('Failed to load trailer');
-        } 
-        const trailer_data = await trailer_response.json();
-        setTrailer(trailer_data);
-      } catch (err) {
-        setTrailerError(err.message);
-      } finally {
-        setLoadingTrailer(false);
+
+      let code = null;
+      for (const link of movie.links) {
+        if (link.label === "Trailer") {
+            for (const chunk of link.url.split("/")) {
+                code = chunk;
+            };
+        }
       }
+
+      if (code) {
+          setTrailer({"code": code, "id": movie.id});
+      }
+      else {
+         setTrailerError("No trailer available!");
+      }
+
+      setLoadingTrailer(false);
     };
 
     return (
         <div>
             { (trailer && movie.id === trailer.id) ? (
               <div className="movie-media-item">
-                <video
-                    controls
-                    autoplay=""
-                    name="media"
-                    className="movie-media-item"
-                    onClick={(e) => {
-                      if (document.pictureInPictureEnabled) {
-                      e.target.requestPictureInPicture();
-                      }
-                    }}
-                >
-                  <source src={trailer.url} type="video/mp4" className="movie-media-item" />
-                </video>
+                <iframe src={`https://www.youtube.com/embed/${trailer.code}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
               </div>
             ) : (
               <Link to={`/movie/${movie.id}`}>
@@ -77,7 +73,7 @@ const Trailer = ({movie}) => {
             )}
           <p>{movie.title} ({movie.release_year})</p>
           <div className="movie-media-item">
-            <button onClick={() => loadTrailer(movie.id)} disabled={loadingTrailer}>
+            <button onClick={() => loadTrailer(movie)} disabled={loadingTrailer}>
               {setLoadingText(loadingTrailer, trailer_id, trailer, movie.id)}
             </button>
           </div>

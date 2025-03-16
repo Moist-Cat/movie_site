@@ -5,13 +5,9 @@ import Trailer from './Trailer' ;
 
 const Result = () => {
   const [movies, setMovies] = useState([]);
-  const [trailer, setTrailer] = useState(null);
-  const [trailer_id, setTrailerId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showProviders, setShowProviders] = useState(false);
   const [error, setError] = useState(null);
-  const [loadingTrailer, setLoadingTrailer] = useState(false);
-  const [trailerError, setTrailerError] = useState(null);
   const [visibleMovies, setVisibleMovies] = useState(5);
 
   const [searchParams] = useSearchParams();
@@ -52,30 +48,6 @@ const Result = () => {
     fetchMovies();
   }, []);
 
-  const loadTrailer = async (movieId) => {
-    if (trailer) {
-      setTrailer(null);
-      if (trailer_id === movieId) {
-          return;
-      }
-    }
-    setTrailerId(movieId);
-    setLoadingTrailer(true);
-    setTrailerError(null);
-    try { 
-      const trailer_response = await fetch(url + `/api/movie/${movieId}/trailer/`);
-      if (!trailer_response.ok) {
-        throw new Error('Failed to load trailer');
-      } 
-      const trailer_data = await trailer_response.json();
-      setTrailer(trailer_data);
-    } catch (err) {
-      setTrailerError(err.message);
-    } finally {
-      setLoadingTrailer(false);
-    }
-  };
-
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -89,20 +61,6 @@ const Result = () => {
     setVisibleMovies(visibleMovies + 5);
   };
   
-  const setLoadingText = (loadingTrailer, movie_id, trailer, trailer_id) => {
-      if (loadingTrailer && movie_id === trailer_id) {
-        return 'Loading Trailer...';
-      }
-      else {
-        if (trailer && trailer_id == movie_id) {
-          return 'Close Trailer';
-        }
-        else {
-          return 'Load trailer';
-        }
-      }
-  }
-
   const back = () => navigate("/");
 
   const toggleProviders = (movieId) => {
