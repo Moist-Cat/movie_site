@@ -277,7 +277,7 @@ class TagAPIView(APIView):
                 # extra join; first join is not required because we have the provider's tag id
                 select(Tag).from_statement(
                     text(
-                        f"SELECT t2.id, t2.name, t2.category FROM tag t1 JOIN tagged_movie tm1 ON t1.id = tm1.tag_id JOIN tagged_movie tm2 ON tm1.movie_id = tm2.movie_id join tag t2 ON tm2.tag_id = t2.id WHERE t1.id = {movies_containing_tag} AND t2.category = '{args['category']}' GROUP BY t2.id;"
+                        f"SELECT t2.id, t2.name, t2.category FROM tagged_movie tm1 JOIN tagged_movie tm2 ON tm1.movie_id = tm2.movie_id join tag t2 ON tm2.tag_id = t2.id WHERE tm1.tag_id = {movies_containing_tag} AND t2.category = '{args['category']}' GROUP BY t2.id;"
                     )
                 )
             ).all()
